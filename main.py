@@ -4,7 +4,7 @@ from sensor import test_connection
 from tools import switch_zapret_preset, ALLOWED_PRESETS
 import concurrent.futures
 
-TARGET_DOMAINS = ["discord.com", "youtube.com", "twitter.com", "instagram.com", "pornhub.com", "linkedin.com"]
+TARGET_DOMAINS = ["discord.com", "youtube.com", "twitter.com", "instagram.com", "pornhub.com", "linkedin.com", "web.telegram.org"]
 
 def test_all_domains():
     """Tests all domains concurrently and returns a list of failed metrics."""
