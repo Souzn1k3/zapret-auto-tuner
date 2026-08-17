@@ -1,8 +1,33 @@
 import subprocess
 import os
+import sys
 import time
+import configparser
 
-ZAPRET_DIR = r"C:\Users\damic\Desktop\vpn\Запретик\zapret-discord-youtube-1.9.7b"
+def get_base_path():
+    """Returns the base path, works for both Python script and compiled PyInstaller executable."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+CONFIG_FILE = os.path.join(get_base_path(), "config.ini")
+
+def load_zapret_dir():
+    config = configparser.ConfigParser()
+    if not os.path.exists(CONFIG_FILE):
+        config['SETTINGS'] = {
+            'ZapretDir': r'C:\Path\To\Your\Zapret\Folder'
+        }
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as configfile:
+            config.write(configfile)
+        print(f"[!] Файл конфигурации не найден. Был создан новый файл: {CONFIG_FILE}")
+        print("[!] Пожалуйста, откройте config.ini, укажите правильный путь к папке Zapret и запустите программу снова.")
+        sys.exit(1)
+        
+    config.read(CONFIG_FILE, encoding='utf-8')
+    return config['SETTINGS'].get('ZapretDir', '')
+
+ZAPRET_DIR = load_zapret_dir()
 
 ALLOWED_PRESETS = [
     "general.bat", "general (ALT).bat", "general (ALT2).bat", "general (ALT3).bat",
@@ -18,6 +43,11 @@ def switch_zapret_preset(preset_name: str) -> str:
     Kills any running Zapret (winws.exe) and starts the specified batch file.
     Includes STRICT security measures to prevent path traversal and arbitrary execution.
     """
+    if not os.path.exists(ZAPRET_DIR):
+        print(f"[!] Ошибка: Папка Zapret не найдена по пути: {ZAPRET_DIR}")
+        print("[!] Проверьте путь в файле config.ini!")
+        sys.exit(1)
+
     # 1. SECURITY: Check against strict whitelist
     if preset_name not in ALLOWED_PRESETS:
         return f"SECURITY ERROR: '{preset_name}' is not in the allowed presets list."
@@ -37,13 +67,10 @@ def switch_zapret_preset(preset_name: str) -> str:
         return f"Error: Preset '{preset_name}' does not exist."
 
     try:
-        # 1. Kill any existing winws.exe processes
         print(f"[*] Stopping existing winws.exe instances...")
         subprocess.run(["taskkill", "/F", "/IM", "winws.exe"], capture_output=True)
         time.sleep(1) # Give it time to terminate
         
-        # 2. Start the new preset script
-        # Since these scripts often use 'start "" winws.exe', running them directly via cmd /c is appropriate.
         print(f"[*] Starting Zapret preset: {preset_name}")
         subprocess.Popen(
             ["cmd.exe", "/c", preset_name], 
@@ -51,7 +78,6 @@ def switch_zapret_preset(preset_name: str) -> str:
             creationflags=subprocess.CREATE_NEW_CONSOLE # Start in a new window so it doesn't block
         )
         
-        # Wait a bit for winws.exe to initialize
         time.sleep(3)
         return f"Successfully switched Zapret to preset: {preset_name}."
     except Exception as e:
